@@ -1,35 +1,34 @@
 use std::fmt;
 
-use nom::{
-    branch::alt,
-    bytes::streaming::tag,
-    character::complete::{self, alpha1, space1},
-    combinator::{map, verify},
-    multi::separated_list0,
-    sequence::delimited,
-    IResult,
-};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Value {
-    Symbol(String),
-    Number(i64),
-}
-
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Value::Symbol(s) => write!(f, "{}", s),
-            Value::Number(n) => write!(f, "{}", n),
-        }
-    }
-}
+use crate::Context;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     List(Vec<Expr>),
-    Const(Value),
+    Symbol(String),
     Variable(String),
+}
+
+impl Expr {
+    pub fn rewrite(&self, context: &Context) -> Option<Expr> {
+        match self {
+            Expr::List(l) => Some(Expr::List(
+                l.iter()
+                    .map(|e| e.rewrite(context))
+                    .collect::<Option<Vec<_>>>()?,
+            )),
+            e @ Expr::Symbol(_) => Some(e.clone()),
+            Expr::Variable(v) => context.get(v).map(|e| e.clone()),
+        }
+    }
+
+    pub fn is_value(&self) -> bool {
+        match self {
+            Expr::List(l) => l.iter().all(|e| e.is_value()),
+            Expr::Symbol(_) => true,
+            Expr::Variable(_) => false,
+        }
+    }
 }
 
 impl fmt::Display for Expr {
@@ -46,45 +45,8 @@ impl fmt::Display for Expr {
                 }
                 write!(f, ")")
             }
-            Expr::Const(c) => write!(f, "{}", c),
+            Expr::Symbol(s) => write!(f, "{}", s),
             Expr::Variable(v) => write!(f, "{}", v),
         }
     }
-}
-
-pub fn expr_p(input: &str) -> IResult<&str, Expr> {
-    alt((list_p, const_p, variable_p))(input)
-}
-
-fn list_p(input: &str) -> IResult<&str, Expr> {
-    map(
-        delimited(tag("("), separated_list0(space1, expr_p), tag(")")),
-        Expr::List,
-    )(input)
-}
-
-fn const_p(input: &str) -> IResult<&str, Expr> {
-    map(alt((symbol_p, number_p)), Expr::Const)(input)
-}
-
-fn variable_p(input: &str) -> IResult<&str, Expr> {
-    map(
-        verify(alpha1, |s: &str| {
-            s.chars().next().map_or(false, |c| c.is_lowercase())
-        }),
-        |s: &str| Expr::Variable(s.to_string()),
-    )(input)
-}
-
-fn symbol_p(input: &str) -> IResult<&str, Value> {
-    map(
-        verify(alpha1, |s: &str| {
-            s.chars().next().map_or(false, |c| c.is_uppercase())
-        }),
-        |s: &str| Value::Symbol(s.to_string()),
-    )(input)
-}
-
-fn number_p(input: &str) -> IResult<&str, Value> {
-    map(complete::i64, Value::Number)(input)
 }

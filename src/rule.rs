@@ -1,17 +1,37 @@
-use nom::{
-    bytes::complete::tag, combinator::map, sequence::separated_pair, IResult,
-};
-
-use crate::expr::{expr_p, Expr};
+use crate::{expr::Expr, Context};
 
 #[derive(Debug, Clone)]
 pub struct Rule {
-    pub lhs: Expr,
-    pub rhs: Expr,
+    pub pattern: Expr,
+    pub expr: Expr,
 }
 
-pub fn rule_p(input: &str) -> IResult<&str, Rule> {
-    map(separated_pair(expr_p, tag("=>"), expr_p), |(lhs, rhs)| {
-        Rule { lhs, rhs }
-    })(input)
+impl Rule {
+    pub fn mr(&self, state: &Expr) -> Option<Expr> {
+        matches(Context::new(), &self.pattern, state)
+            .and_then(|context| self.expr.rewrite(&context))
+    }
+}
+
+fn matches(context: Context, pattern: &Expr, state: &Expr) -> Option<Context> {
+    match (pattern, state) {
+        (Expr::Variable(v), state) => match context.get(v) {
+            None => Some({
+                let mut context = context;
+                context.insert(v.clone(), state.clone());
+                context
+            }),
+            Some(e) if e == state => Some(context),
+            _ => None,
+        },
+        (Expr::List(l), Expr::List(ll)) => {
+            let mut context = context;
+            for (p, e) in l.iter().zip(ll.into_iter()) {
+                context = matches(context, p, e)?;
+            }
+            Some(context)
+        }
+        (Expr::Symbol(s), Expr::Symbol(ss)) if s == ss => Some(context),
+        _ => None,
+    }
 }

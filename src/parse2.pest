@@ -1,0 +1,11 @@
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+
+symbol   = ${ ASCII_ALPHA_UPPER ~ ASCII_ALPHA* }
+variable = ${ ASCII_ALPHA_LOWER ~ ASCII_ALPHA* }
+list     = { "(" ~ expr? ~ expr* ~ ")"}
+
+expr = _{ list | symbol | variable }
+
+rule = { expr ~ "=>" ~ expr }
+
+rules = { SOI ~ rule* ~ EOI}
