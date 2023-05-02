@@ -1,8 +1,8 @@
 use std::{
-    fs,
+    env, fs,
     io::{self, Write},
     iter,
-    process::exit, env,
+    process::exit,
 };
 
 use mrl::{expr::Expr, parse, rule::Rule};
@@ -62,6 +62,18 @@ fn usage() {
     eprintln!("  mrl RULES_FILE");
 }
 
+fn reload(filename: &str) -> Option<Vec<Rule>> {
+    let source = fs::read_to_string(filename).ok()?;
+    match parse::parser::rules(&source) {
+        Ok(rules) => Some(rules),
+        Err(e) => {
+            eprintln!("Could not parse the rules from \"{}\":", filename);
+            eprintln!("{}", e);
+            None
+        }
+    }
+}
+
 fn main() {
     let args = env::args().collect::<Vec<_>>();
 
@@ -70,22 +82,21 @@ fn main() {
         exit(1)
     });
 
-    let source = fs::read_to_string(filename).unwrap();
-
-    let rules = parse::parser::rules(&source).unwrap_or_else(|e| {
-        eprintln!("Could not parse the rules:");
-        eprintln!("{}", e);
-        exit(2)
-    });
+    let mut rules = reload(filename).unwrap_or_else(|| exit(2));
 
     let mut debug = false;
 
     prompt();
     for l in io::stdin().lines() {
         if let Ok(l) = l {
-            if l == "=debug" {
+            if l == "=debug" || l == "=d" {
                 debug = !debug;
                 println!("Toggled debug to {}", debug);
+            } else if l == "=reload" || l == "=r" {
+                reload(filename).map(|r| {
+                    rules = r;
+                    println!("Reloaded rules from \"{}\"", filename);
+                });
             } else {
                 match parse::parser::expr(&l) {
                     Ok(mut s) => evaluate(debug, &rules, &mut s),
