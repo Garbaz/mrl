@@ -58,8 +58,8 @@ fn prompt() {
 }
 
 fn usage() {
-    println!("Usage:");
-    println!("  mrl RULES_FILE");
+    eprintln!("Usage:");
+    eprintln!("  mrl RULES_FILE");
 }
 
 fn main() {
@@ -73,8 +73,8 @@ fn main() {
     let source = fs::read_to_string(filename).unwrap();
 
     let rules = parse::parser::rules(&source).unwrap_or_else(|e| {
-        println!("Could not parse the rules:");
-        println!("{}", e);
+        eprintln!("Could not parse the rules:");
+        eprintln!("{}", e);
         exit(2)
     });
 
@@ -90,8 +90,8 @@ fn main() {
                 match parse::parser::expr(&l) {
                     Ok(mut s) => evaluate(debug, &rules, &mut s),
                     Err(e) => {
-                        println!("Could not parse the expression:");
-                        println!("{}", e)
+                        eprintln!("Could not parse the expression:");
+                        eprintln!("{}", e)
                     }
                 }
             }
