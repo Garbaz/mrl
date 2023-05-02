@@ -1,74 +1,101 @@
-// use pest::Parser;
-// use pest_derive::Parser;
-use std::{fs, io, process::exit};
+use std::{
+    fs,
+    io::{self, Write},
+    iter,
+    process::exit, env,
+};
 
-use mrl::{expr::Expr, parse3, rule::Rule};
+use mrl::{expr::Expr, parse, rule::Rule};
 
-// #[derive(Parser)]
-// #[grammar = "expr.pest"]
-// pub struct ExprParser;
-
-fn rewrite(rules: &Vec<Rule>, state: &Expr) -> Option<Expr> {
-    for r in rules {
-        if let s @ Some(_) = r.mr(state) {
-            return s;
+fn rewrites(rules: &Vec<Rule>, mut states: Vec<&mut Expr>) -> Option<Rule> {
+    for s in states.iter_mut() {
+        for r in rules {
+            if r.mr(s).is_some() {
+                return Some(r.clone());
+            }
+        }
+    }
+    let states = states
+        .iter_mut()
+        .flat_map(|e| -> Box<dyn Iterator<Item = &mut Expr>> {
+            if let Expr::List(l) = e {
+                Box::new(l.iter_mut())
+            } else {
+                Box::new(iter::empty())
+            }
+        })
+        .collect::<Vec<_>>();
+    if !states.is_empty() {
+        if let Some(r) = rewrites(rules, states) {
+            return Some(r);
         }
     }
     None
 }
 
-fn rewrites(rules: &Vec<Rule>, states: &Vec<Expr>) -> Option<Expr> {
-    for s in states {
-        if let s @ Some(_) = rewrite(rules, s) {
-            return s;
-        }
-    }
-
-    None
+fn rewrite(rules: &Vec<Rule>, state: &mut Expr) -> Option<Rule> {
+    rewrites(rules, vec![state])
 }
 
-fn evaluate(rules: &Vec<Rule>, mut state: Expr) -> Expr {
-    while let Some(s) = rewrite(rules, &state) {
-        state = s;
+fn evaluate(debug: bool, rules: &Vec<Rule>, state: &mut Expr) {
+    if debug {
+        println!("{}", state);
     }
-    state
+    while let Some(r) = rewrite(rules, state) {
+        if debug {
+            println!("{}", r);
+            println!("{}", state);
+        }
+    }
+    if !debug {
+        println!("{}", state);
+    }
+}
+
+fn prompt() {
+    print!("mrl> ");
+    io::stdout().flush().unwrap_or_default();
+}
+
+fn usage() {
+    println!("Usage:");
+    println!("  mrl RULES_FILE");
 }
 
 fn main() {
-    let source = fs::read_to_string("test.mrl").unwrap();
+    let args = env::args().collect::<Vec<_>>();
 
-    let rules = parse3::parser::rules(&source).unwrap_or_else(|e| {
-        println!("{}", e);
+    let filename = args.get(1).unwrap_or_else(|| {
+        usage();
         exit(1)
     });
 
-    // println!("{:?}", parse2::Parser::parse(parse2::Rule::rules, &file));
+    let source = fs::read_to_string(filename).unwrap();
 
-    // let (rem, rules) = parse::rules(&file).unwrap();
+    let rules = parse::parser::rules(&source).unwrap_or_else(|e| {
+        println!("Could not parse the rules:");
+        println!("{}", e);
+        exit(2)
+    });
 
-    // if !rem.is_empty() {
-    //     println!("Unparsed rules:\n{}\n------", rem);
-    // }
+    let mut debug = false;
 
+    prompt();
     for l in io::stdin().lines() {
         if let Ok(l) = l {
-            match parse3::parser::expr(&l) {
-                Ok(s) => {
-                    println!("{}", evaluate(&rules, s))
+            if l == "=debug" {
+                debug = !debug;
+                println!("Toggled debug to {}", debug);
+            } else {
+                match parse::parser::expr(&l) {
+                    Ok(mut s) => evaluate(debug, &rules, &mut s),
+                    Err(e) => {
+                        println!("Could not parse the expression:");
+                        println!("{}", e)
+                    }
                 }
-                Err(e) => println!("{}", e),
             }
-            // match parse::expr(&l) {
-            //     Ok((r, s)) if r.is_empty() => {
-            //         println!("{}", evaluate(&rules, s))
-            //     }
-            //     Ok((r, _)) => println!("Excess characters: \"{}\"", r),
-            //     Err(e) => println!("({}", e),
-            // }
-            // match ExprParser::parse(Rule::expr, &l) {
-            //     Ok(p) => println!("{}", p),
-            //     Err(e) => println!("{}", e),
-            // }
         }
+        prompt();
     }
 }

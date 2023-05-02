@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{expr::Expr, Context};
 
 #[derive(Debug, Clone)]
@@ -7,9 +9,10 @@ pub struct Rule {
 }
 
 impl Rule {
-    pub fn mr(&self, state: &Expr) -> Option<Expr> {
-        matches(Context::new(), &self.pattern, state)
-            .and_then(|context| self.expr.rewrite(&context))
+    pub fn mr(&self, state: &mut Expr) -> Option<()> {
+        let context = matches(Context::new(), &self.pattern, state)?;
+        *state = self.expr.rewrite(&context)?;
+        Some(())
     }
 }
 
@@ -33,5 +36,11 @@ fn matches(context: Context, pattern: &Expr, state: &Expr) -> Option<Context> {
         }
         (Expr::Symbol(s), Expr::Symbol(ss)) if s == ss => Some(context),
         _ => None,
+    }
+}
+
+impl fmt::Display for Rule {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} = {}", self.pattern, self.expr)
     }
 }
