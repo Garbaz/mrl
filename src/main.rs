@@ -43,7 +43,7 @@ fn evaluate(debug: bool, rules: &Vec<Rule>, state: &mut Expr) {
     }
     while let Some(r) = rewrite(rules, state) {
         if debug {
-            println!("{}", r);
+            println!("⟱ {}", r);
             println!("{}", state);
         }
     }

@@ -5,3 +5,6 @@
   - Sparse continuous bit vector encoding
 - Probabilistic evaluation: Of all patterns that match, one is chosen randomly. Weighted by abstraction.
 - Normal evaluation: Of all patterns that match, the least abstract is chosen.
+- Statically check if there is a lhs matching the rhs (We want execution to terminate though, right? Or not?)
+- Multiple parallel states (e.g. something like `k(a b c) l(1 2 3) => k(a) (b c)`)
+- Multiple independent rule sets (interaction/switch?)

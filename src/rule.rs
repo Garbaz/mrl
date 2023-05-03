@@ -28,11 +28,15 @@ fn matches(context: Context, pattern: &Expr, state: &Expr) -> Option<Context> {
             _ => None,
         },
         (Expr::List(l), Expr::List(ll)) => {
-            let mut context = context;
-            for (p, e) in l.iter().zip(ll.into_iter()) {
-                context = matches(context, p, e)?;
+            if l.len() == ll.len() {
+                let mut context = context;
+                for (p, e) in l.iter().zip(ll.iter()) {
+                    context = matches(context, p, e)?;
+                }
+                Some(context)
+            } else {
+                None
             }
-            Some(context)
         }
         (Expr::Symbol(s), Expr::Symbol(ss)) if s == ss => Some(context),
         _ => None,

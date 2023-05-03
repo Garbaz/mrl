@@ -1,0 +1,26 @@
+(1st (X Y)) = X
+(2nd (X Y)) = Y
+
+(flat1 (X)) = X
+(flat2 (X (Y))) = (X Y)
+(flat3 (X (Y (Z)))) = (X Y Z)
+
+(suc (0)) = (1)
+(suc (1)) = (2)
+(suc (2)) = (3)
+(suc (3)) = (4)
+(suc (4)) = (5)
+(suc (5)) = (6)
+(suc (6)) = (7)
+(suc (7)) = (8)
+(suc (8)) = (9)
+(suc (9)) = (1 0)
+
+(suc (9 9)) = (1 0 0)
+(suc (X 9)) = ((suc (X)) 0)
+(suc (X Y)) = (flat2 (X (suc (Y))))
+
+(X + Y) = (add (c 0) X Y)
+
+(add (c X) X Y) = (Y)
+(add (c C) X Y) = (add (c (suc C)) X (suc Y))
