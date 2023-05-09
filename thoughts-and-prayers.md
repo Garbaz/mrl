@@ -8,3 +8,6 @@
 - Statically check if there is a lhs matching the rhs (We want execution to terminate though, right? Or not?)
 - Multiple parallel states (e.g. something like `k(a b c) l(1 2 3) => k(a) (b c)`)
 - Multiple independent rule sets (interaction/switch?)
+  - Aka. functions ^^ (e.g. instead of the above syntax for parallel states: `f(X Y Z)`)
+  - How does this differ from `(f X Y Z)`? Not at all, right?
+  - 
